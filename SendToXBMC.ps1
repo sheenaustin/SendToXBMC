@@ -1,7 +1,8 @@
-﻿$xbmcip = ""
+﻿$xbmcip = "172.16.51.5"
 $xbmcport = "80"
-$xbmcusr = 
-$xbmcpwd = 
+$xbmcusr =
+$xbmcpwd =
+$i=1
 if ($xbmcusr.Length -eq 0) {
     $xbmcurl = "http://$xbmcip"+":"+"$xbmcport/jsonrpc"
     }
@@ -12,6 +13,7 @@ Add-Type -AssemblyName System.Web
 for(;;) {
 #The while loop is in place to ensure that the script re-prompts for a URL if the user just hits enter.
 #The value read into the variable is stripped off any spaces.
+write-host [$i]
 while ($urltoplay.Length -eq 0){$urltoplay = $(Read-Host 'Enter/Paste the URL you want to play') -replace '\s+', ''}
 
 write-host 
@@ -26,26 +28,38 @@ switch -wildcard ($urltoplay)
         $command = '{"jsonrpc": "2.0", "method": "Player.Open", "params":{"item":{"file":"plugin://plugin.video.collegehumor/watch/'+$ch1+'%2F'+$ch2+'%2F'+$ch3+'/"}}, "id" : 1}'
         ; break
         }
-    {($_ -like "*youtu.be*") -or ($_ -like "*daclips*") -or  ($_ -like "*videozer*") -or  ($_ -like "*180upload*") -or  ($_ -like "*nolimitvideo*") -or  ($_ -like "*rapidvideo*") -or  ($_ -like "*filenuke*") -or  ($_ -like "*2gbhosting*") -or  ($_ -like "*novamov*") -or  ($_ -like "*vidxden*") -or  ($_ -like "*ovile*") -or  ($_ -like "*ufliq*") -or  ($_ -like "*xvidstage*") -or  ($_ -like "*veoh*") -or  ($_ -like "*override_me*") -or  ($_ -like "*putlocker*") -or  ($_ -like "*sockshare*") -or  ($_ -like "*sharefiles*") -or  ($_ -like "*movdivx*") -or  ($_ -like "*hostingcup*") -or  ($_ -like "*stagevu*") -or  ($_ -like "*movpod*") -or  ($_ -like "*skyload*") -or  ($_ -like "*movshare*") -or  ($_ -like "*ecostream*") -or  ($_ -like "*seeon.tv*") -or  ($_ -like "*stream2k*") -or  ($_ -like "*youtube*") -or  ($_ -like "*flashx*") -or  ($_ -like "*vimeo*") -or  ($_ -like "*jumbofiles*") -or  ($_ -like "*videobb*") -or  ($_ -like "*override_me*") -or  ($_ -like "*realdebrid*") -or  ($_ -like "*divxstage*") -or  ($_ -like "*videoweed.es*") -or  ($_ -like "*gorillavid*") -or  ($_ -like "*zshare*") -or  ($_ -like "*vidstre*") -or  ($_ -like "*uploadc*") -or  ($_ -like "*dailymotion*") -or  ($_ -like "*veeHD*") -or  ($_ -like "*zalaa*") -or  ($_ -like "*filebox*") -or  ($_ -like "*tubeplus.me*")} {
-        write-host Sending link to the 1Channel Plugin.
+
+    "*.ted.com*"{
+        write-host Ted Talks Video detected, calling TedTalks Plugin
         $urltoplay = [System.Web.HttpUtility]::UrlEncode($urltoplay)
-        $command = '{"jsonrpc": "2.0", "method": "Player.Open", "params":{"item":{"file":"plugin://plugin.video.1channel/?mode='+"PlaySource"+'&url='+$urltoplay+'/"}}, "id" : 1}'
-        ; break
+        $command = '{"jsonrpc": "2.0", "method": "Player.Open", "params":{"item":{"file":"plugin://plugin.video.ted.talks/?url='+$urltoplay+'&mode=playVideo&icon=http%3A%2F%2Fassets.tedcdn.com%2Fimages%2Fted_logo.gif"}}, "id" : 1}'
         }
-    default {
+    "*.youtube.com*"{
+        write-host YouTube Video detected, calling YouTube Plugin
+        $urltoplay=$urltoplay.split('/').split('?')[4].split('=')[1]
+        $command = '{"jsonrpc": "2.0", "method": "Player.Open", "params":{"item":{"file":"plugin://plugin.video.youtube/?path=/root/video&action=play_video&videoid='+$urltoplay+'"}}, "id" : 1}'
+        }
+    {($_ -like "*.mp4") -or ($_ -like "*.flv") -or ($_ -like "*.avi") -or ($_ -like "*.mpg") -or ($_ -like "*.mkv") }{
         write-host Sending link to the default XBMC player.
         $command = '{"jsonrpc": "2.0", "method": "Player.Open", "params":{"item":{"file":"'+$urltoplay+'"}}, "id" : 1}' 
         ; break
         }  
+    default{
+        write-host Sending link to the SendToXBMC Plugin.
+        $urltoplay = [System.Web.HttpUtility]::UrlEncode($urltoplay)
+        $command = '{"jsonrpc": "2.0", "method": "Player.Open", "params":{"item":{"file":"plugin://plugin.video.sendtoxbmc/?url='+$urltoplay+'/"}}, "id" : 1}'
+        ; break
+        }
 }
 
 write-host "JSON Command:    $command"
 
 #The following command is only available with PowerShell 3.0 and later.
-Invoke-RestMethod -uri $xbmcurl -ContentType "application/json" -Method POST -Body $command -TimeoutSec 60
+Invoke-WebRequest -uri $xbmcurl -ContentType "application/json" -Method POST -Body $command -TimeoutSec 60 | fl
 
 #Looping back to prompt for another URL.
-$i ; $i++
+$i++
 $urltoplay = $null
+sleep 5
 clear
 }
